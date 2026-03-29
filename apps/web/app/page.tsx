@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, ShoppingBag, Search, Menu } from 'lucide-react';
@@ -13,6 +15,7 @@ export default function HomePage() {
             <div className="hidden lg:flex items-center gap-6 text-[10px] font-bold uppercase tracking-[0.2em]">
               <a href="/shop" className="hover:text-gray-500 transition-colors">Shop</a>
               <a href="/collections" className="hover:text-gray-500 transition-colors">Collections</a>
+              <a href="/admin/dashboard" className="hover:text-gray-500 transition-colors">Admin</a>
               <a href="/about" className="hover:text-gray-500 transition-colors">About</a>
             </div>
           </div>
