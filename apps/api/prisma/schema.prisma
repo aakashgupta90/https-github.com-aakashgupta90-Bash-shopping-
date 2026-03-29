@@ -12,20 +12,82 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      String   @default("customer")
+  role      String   @default("CUSTOMER") // CUSTOMER, ADMIN, VENDOR
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  orders    Order[]
+  cart      Cart?
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryToCategory")
+  products  Product[]
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
-  slug        String   @unique
+  slug        String           @unique
   description String
-  price       Float
-  category    String
-  images      String   // JSON stringified array
-  stock       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  basePrice   Float
+  categoryId  String
+  category    Category         @relation(fields: [categoryId], references: [id])
+  attributes  String           // JSONB metadata
+  variants    ProductVariant[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  sku       String   @unique
+  name      String   // e.g., "iPhone 15 - Black - 128GB"
+  price     Float?   // Override base price if needed
+  stock     Int      @default(0)
+  attributes String  // JSONB (color, size, etc.)
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?    @unique
+  user      User?      @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  variantId String
+  quantity  Int      @default(1)
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  status      String      @default("PENDING") // PENDING, PAID, SHIPPED, DELIVERED, CANCELLED
+  totalAmount Float
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id])
+  variantId String
+  name      String // Snapshot
+  price     Float  // Snapshot (Price Freeze)
+  quantity  Int
 }

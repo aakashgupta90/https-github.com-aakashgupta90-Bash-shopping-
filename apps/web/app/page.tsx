@@ -1,10 +1,34 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, ShoppingBag, Search, Menu } from 'lucide-react';
 
+import { useAuthStore } from '../store/useAuthStore';
+import { useCartStore } from '../store/useCartStore';
+import { apiFetch } from '@/lib/api';
+import { toast } from 'sonner';
+
 export default function HomePage() {
+  const { user, logout } = useAuthStore();
+  const [featured, setFeatured] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiFetch('/products?limit=3')
+      .then(setFeatured)
+      .catch(console.error);
+  }, []);
+
+  const handleAddQuick = (product: any) => {
+    addItem({
+      variantId: product.variants[0].id,
+      name: product.name,
+      price: product.basePrice,
+      quantity: 1,
+      image: `https://picsum.photos/seed/${product.slug}/800/1200`,
+    });
+    toast.success('Added to bag');
+  };
   return (
     <main className="min-h-screen">
       {/* Navigation */}
@@ -24,9 +48,19 @@ export default function HomePage() {
           
           <div className="flex items-center gap-6">
             <button className="hover:text-gray-500 transition-colors"><Search size={20} /></button>
+            {user ? (
+              <div className="flex items-center gap-6">
+                <a href="/profile" className="text-[10px] font-bold uppercase tracking-widest hover:text-gray-500">{user.name}</a>
+                <button onClick={logout} className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black">Logout</button>
+              </div>
+            ) : (
+              <a href="/login" className="text-[10px] font-bold uppercase tracking-widest hover:text-gray-500">Login</a>
+            )}
             <button className="hover:text-gray-500 transition-colors relative">
               <ShoppingBag size={20} />
-              <span className="absolute -top-1 -right-1 bg-black text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center">0</span>
+              <span className="absolute -top-1 -right-1 bg-black text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center">
+                {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
+              </span>
             </button>
           </div>
         </div>
@@ -75,29 +109,35 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-          {[1, 2, 3].map((i) => (
+          {featured.map((product) => (
             <motion.div 
-              key={i}
+              key={product.id}
               whileHover={{ y: -10 }}
               className="group cursor-pointer"
             >
-              <div className="aspect-[3/4] bg-gray-100 mb-6 overflow-hidden relative">
+              <a href={`/shop/${product.slug}`} className="aspect-[3/4] bg-gray-100 mb-6 overflow-hidden relative block">
                 <img 
-                  src={`https://picsum.photos/seed/prod${i}/800/1200`} 
+                  src={`https://picsum.photos/seed/${product.slug}/800/1200`} 
                   className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
-                  alt="Product"
+                  alt={product.name}
                   referrerPolicy="no-referrer"
                 />
-                <button className="absolute bottom-6 left-6 right-6 bg-white py-4 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleAddQuick(product);
+                  }}
+                  className="absolute bottom-6 left-6 right-6 bg-white py-4 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity"
+                >
                   Add to Bag
                 </button>
-              </div>
+              </a>
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-widest mb-1">Essential Piece No. {i}</h4>
-                  <p className="text-xs text-gray-500 uppercase tracking-widest">Archival Collection</p>
+                  <h4 className="text-xs font-bold uppercase tracking-widest mb-1">{product.name}</h4>
+                  <p className="text-xs text-gray-500 uppercase tracking-widest">{product.category.name}</p>
                 </div>
-                <span className="text-xs font-bold tracking-widest">$240.00</span>
+                <span className="text-xs font-bold tracking-widest">${product.basePrice.toFixed(2)}</span>
               </div>
             </motion.div>
           ))}

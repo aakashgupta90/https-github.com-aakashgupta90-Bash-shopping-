@@ -1,63 +1,54 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Create admin user
-  const admin = await prisma.user.upsert({
+  // 1. Create Categories
+  const watches = await prisma.category.upsert({
+    where: { slug: 'watches' },
+    update: {},
+    create: { name: 'Watches', slug: 'watches' },
+  });
+
+  const bags = await prisma.category.upsert({
+    where: { slug: 'bags' },
+    update: {},
+    create: { name: 'Bags', slug: 'bags' },
+  });
+
+  // 2. Create Admin
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  await prisma.user.upsert({
     where: { email: 'admin@bash.com' },
     update: {},
     create: {
       email: 'admin@bash.com',
-      password: 'password123', // In a real app, hash this!
+      password: hashedPassword,
       name: 'Admin User',
       role: 'ADMIN',
     },
   });
 
-  console.log({ admin });
-
-  // Create some products
-  const products = [
-    {
+  // 3. Create Products
+  const p1 = await prisma.product.create({
+    data: {
       name: 'Essential Watch No. 1',
       slug: 'essential-watch-no-1',
       description: 'A minimalist timepiece for the modern professional.',
-      price: 240.00,
-      stock: 12,
-      category: 'Watches',
-      image: 'https://picsum.photos/seed/prod1/800/1200',
-      images: JSON.stringify(['https://picsum.photos/seed/prod1/800/1200']),
-    },
-    {
-      name: 'Archival Backpack',
-      slug: 'archival-backpack',
-      description: 'Durable and stylish, perfect for daily use.',
-      price: 180.00,
-      stock: 4,
-      category: 'Bags',
-      image: 'https://picsum.photos/seed/prod2/800/1200',
-      images: JSON.stringify(['https://picsum.photos/seed/prod2/800/1200']),
-    },
-    {
-      name: 'Minimalist Wallet',
-      slug: 'minimalist-wallet',
-      description: 'Slim design, premium leather.',
-      price: 85.00,
-      stock: 0,
-      category: 'Accessories',
-      image: 'https://picsum.photos/seed/prod3/800/1200',
-      images: JSON.stringify(['https://picsum.photos/seed/prod3/800/1200']),
-    },
-  ];
+      basePrice: 240.00,
+      categoryId: watches.id,
+      attributes: JSON.stringify({ material: 'Stainless Steel', movement: 'Quartz' }),
+      variants: {
+        create: [
+          { sku: 'W1-BLK', name: 'Black / Silver', stock: 10, attributes: JSON.stringify({ color: 'Black' }) },
+          { sku: 'W1-SLV', name: 'Silver / White', stock: 5, attributes: JSON.stringify({ color: 'Silver' }) },
+        ]
+      }
+    }
+  });
 
-  for (const product of products) {
-    await prisma.product.create({
-      data: product,
-    });
-  }
-
-  console.log('Seed data created successfully');
+  console.log('✅ Seed complete');
 }
 
 main()
