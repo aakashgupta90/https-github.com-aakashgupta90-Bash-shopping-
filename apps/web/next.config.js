@@ -2,10 +2,21 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['picsum.photos'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+      },
+    ],
   },
-  // In this environment, we might need to handle port 3000 specifically
-  // but next dev -p 3000 should handle it.
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:3001/api/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
