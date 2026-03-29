@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { FirebaseProvider } from "@/components/FirebaseProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
@@ -19,8 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body className="antialiased font-sans bg-white text-black">
-        {children}
-        <Toaster position="bottom-right" />
+        <FirebaseProvider>
+          {children}
+          <Toaster position="bottom-right" />
+        </FirebaseProvider>
       </body>
     </html>
   );

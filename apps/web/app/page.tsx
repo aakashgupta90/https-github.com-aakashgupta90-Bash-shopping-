@@ -6,17 +6,42 @@ import { ArrowRight, ShoppingBag, Search, Menu } from 'lucide-react';
 
 import { useAuthStore } from '../store/useAuthStore';
 import { useCartStore } from '../store/useCartStore';
-import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
+
+import { collection, getDocs, query, limit, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function HomePage() {
   const { user, logout } = useAuthStore();
   const [featured, setFeatured] = useState<any[]>([]);
+  const addItem = useCartStore((state) => state.addItem);
+  const cartItems = useCartStore((state) => state.items);
 
   useEffect(() => {
-    apiFetch('/products?limit=3')
-      .then(setFeatured)
-      .catch(console.error);
+    const fetchFeatured = async () => {
+      try {
+        const q = query(collection(db, 'products'), limit(3));
+        const querySnapshot = await getDocs(q);
+        const productsData = await Promise.all(querySnapshot.docs.map(async (productDoc) => {
+          const product = { id: productDoc.id, ...productDoc.data() } as any;
+          
+          // Fetch variants
+          const variantsSnapshot = await getDocs(collection(db, 'products', productDoc.id, 'variants'));
+          const variants = variantsSnapshot.docs.map(v => ({ id: v.id, ...v.data() }));
+          
+          // Fetch category
+          const categoryDoc = await getDocs(query(collection(db, 'categories'), where('id', '==', product.categoryId)));
+          const category = categoryDoc.docs[0]?.data() || { name: 'Uncategorized' };
+
+          return { ...product, variants, category };
+        }));
+        setFeatured(productsData);
+      } catch (err: any) {
+        console.error(err);
+      }
+    };
+
+    fetchFeatured();
   }, []);
 
   const handleAddQuick = (product: any) => {

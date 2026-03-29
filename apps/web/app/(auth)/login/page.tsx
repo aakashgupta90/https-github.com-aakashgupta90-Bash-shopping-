@@ -6,11 +6,13 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const setAuth = useAuthStore((state) => state.setAuth);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,17 +20,7 @@ export default function LoginPage() {
     setLoading(true);
     
     try {
-      const res = await fetch('http://localhost:3001/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) throw new Error(data.error || 'Login failed');
-      
-      setAuth(data.user, data.token);
+      await signInWithEmailAndPassword(auth, email, password);
       toast.success('Welcome back to BASH');
       router.push('/');
     } catch (err: any) {

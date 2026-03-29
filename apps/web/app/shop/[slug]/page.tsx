@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'motion/react';
-import { apiFetch } from '@/lib/api';
 import { ShoppingBag, ArrowLeft, Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { toast } from 'sonner';
+
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
@@ -17,13 +19,38 @@ export default function ProductDetailPage() {
   const addItem = useCartStore((state) => state.addItem);
 
   useEffect(() => {
-    apiFetch(`/products/${slug}`)
-      .then((data) => {
-        setProduct(data);
-        setSelectedVariant(data.variants[0]);
-      })
-      .catch((err) => toast.error(err.message))
-      .finally(() => setLoading(false));
+    const fetchProduct = async () => {
+      try {
+        const q = query(collection(db, 'products'), where('slug', '==', slug), limit(1));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          setLoading(false);
+          return;
+        }
+
+        const productDoc = querySnapshot.docs[0];
+        const productData = { id: productDoc.id, ...productDoc.data() } as any;
+
+        // Fetch variants
+        const variantsSnapshot = await getDocs(collection(db, 'products', productDoc.id, 'variants'));
+        const variants = variantsSnapshot.docs.map(v => ({ id: v.id, ...v.data() }));
+
+        // Fetch category
+        const categoryDoc = await getDocs(query(collection(db, 'categories'), where('id', '==', productData.categoryId)));
+        const category = categoryDoc.docs[0]?.data() || { name: 'Uncategorized' };
+
+        const fullProduct = { ...productData, variants, category };
+        setProduct(fullProduct);
+        setSelectedVariant(variants[0]);
+      } catch (err: any) {
+        toast.error(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
   }, [slug]);
 
   const handleAddToBag = () => {

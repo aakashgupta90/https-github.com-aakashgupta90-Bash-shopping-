@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { apiFetch } from '@/lib/api';
 import { ShoppingBag, Filter, ChevronDown } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { toast } from 'sonner';
+
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function ShopPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -13,10 +15,31 @@ export default function ShopPage() {
   const addItem = useCartStore((state) => state.addItem);
 
   useEffect(() => {
-    apiFetch('/products')
-      .then(setProducts)
-      .catch((err) => toast.error(err.message))
-      .finally(() => setLoading(false));
+    const fetchProducts = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'products'));
+        const productsData = await Promise.all(querySnapshot.docs.map(async (productDoc) => {
+          const product = { id: productDoc.id, ...productDoc.data() } as any;
+          
+          // Fetch variants
+          const variantsSnapshot = await getDocs(collection(db, 'products', productDoc.id, 'variants'));
+          const variants = variantsSnapshot.docs.map(v => ({ id: v.id, ...v.data() }));
+          
+          // Fetch category
+          const categoryDoc = await getDocs(query(collection(db, 'categories'), where('id', '==', product.categoryId)));
+          const category = categoryDoc.docs[0]?.data() || { name: 'Uncategorized' };
+
+          return { ...product, variants, category };
+        }));
+        setProducts(productsData);
+      } catch (err: any) {
+        toast.error(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
   }, []);
 
   const handleAddToBag = (product: any) => {
