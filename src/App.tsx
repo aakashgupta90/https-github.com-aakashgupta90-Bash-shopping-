@@ -141,22 +141,53 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log('Auth state changed:', currentUser?.email);
       setUser(currentUser);
+      
       if (currentUser) {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (userDoc.exists()) {
-          setRole(userDoc.data().role);
-        } else {
-          const newUserData: User = {
-            uid: currentUser.uid,
-            email: currentUser.email!,
-            role: 'customer',
-            createdAt: new Date().toISOString()
-          };
-          await setDoc(doc(db, 'users', currentUser.uid), newUserData);
-          setRole('customer');
+        const adminEmail = "guptaaakash2020123@gmail.com".toLowerCase();
+        const isAdminEmail = currentUser.email?.toLowerCase() === adminEmail;
+        console.log('Is admin email:', isAdminEmail, 'User email:', currentUser.email);
+        
+        // Optimistically set role to admin if email matches
+        if (isAdminEmail) {
+          console.log('Setting role to admin (optimistic)');
+          setRole('admin');
+        }
+
+        try {
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          
+          if (userDoc.exists()) {
+            const currentRole = userDoc.data().role;
+            console.log('Current role from DB:', currentRole);
+            
+            // Upgrade to admin if email matches but role is not admin in DB
+            if (isAdminEmail && currentRole !== 'admin') {
+              console.log('Upgrading user to admin in DB');
+              await setDoc(doc(db, 'users', currentUser.uid), { ...userDoc.data(), role: 'admin' });
+              setRole('admin');
+            } else if (!isAdminEmail) {
+              setRole(currentRole);
+            }
+          } else {
+            console.log('User doc does not exist, creating...');
+            const newUserData: User = {
+              uid: currentUser.uid,
+              email: currentUser.email!,
+              role: isAdminEmail ? 'admin' : 'customer',
+              createdAt: new Date().toISOString()
+            };
+            await setDoc(doc(db, 'users', currentUser.uid), newUserData);
+            setRole(newUserData.role);
+          }
+        } catch (error) {
+          console.error('Error fetching user role:', error);
+          // Fallback to optimistic role if it was set
+          if (!isAdminEmail) setRole('customer');
         }
       } else {
+        console.log('No user logged in, clearing role');
         setRole(null);
       }
       setLoading(false);
@@ -172,6 +203,8 @@ export default function App() {
     );
   }
 
+  console.log('Rendering App, role:', role);
+
   return (
     <Router>
       <Toaster position="top-center" richColors />
@@ -186,7 +219,20 @@ export default function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/admin/*" element={role === 'admin' ? <AdminDashboard /> : <Home />} />
+            <Route 
+              path="/admin/*" 
+              element={
+                role === 'admin' ? (
+                  <AdminDashboard />
+                ) : (
+                  <div className="container mx-auto px-6 py-20 text-center">
+                    <h1 className="text-4xl font-display uppercase mb-4">Access Denied</h1>
+                    <p className="text-gray-500 mb-8">You do not have permission to view this page.</p>
+                    <Link to="/" className="text-black underline underline-offset-4 uppercase text-xs font-bold tracking-widest">Return Home</Link>
+                  </div>
+                )
+              } 
+            />
           </Routes>
         </main>
         <Footer />
