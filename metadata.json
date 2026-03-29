@@ -1,0 +1,5 @@
+{
+  "name": "Bash E-Commerce Platform",
+  "description": "A highly customizable full-stack e-commerce platform with Next.js-style routing, Express backend, and Firebase integration.",
+  "requestFramePermissions": []
+}
