@@ -11,9 +11,16 @@
   "scripts": {
     "dev": "turbo run dev --",
     "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
     "api:dev": "npm run dev --workspace=apps/api",
     "web:dev": "npm run dev --workspace=apps/web",
     "seed": "prisma db seed --schema=apps/api/prisma/schema.prisma"
+  },
+  "overrides": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "next": "^14.2.15"
   },
   "prisma": {
     "seed": "tsx apps/api/prisma/seed.ts"
@@ -51,6 +58,8 @@
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.15",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
